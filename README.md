@@ -1034,3 +1034,187 @@ SkipWhile (num % 3 != 0):
 4 % 3 ≠ 0 ✓ (Skip)
 6 % 3 = 0 ✗ (Take this and rest)
 ```
+
+
+# LINQ Query Continuation with let and into
+
+## Overview
+Query continuation in LINQ allows you to continue processing results using the 'into' keyword. This feature is only available in query syntax and is particularly useful for complex transformations.
+
+```mermaid
+graph TD
+    A[Initial Query] --> B[First Operation]
+    B --> C[into keyword]
+    C --> D[Continue Query]
+    D --> E[Final Result]
+    
+    subgraph "Query Flow"
+        B -->|"Transform data"| C
+        C -->|"New variable scope"| D
+    end
+```
+
+## Basic Setup
+```csharp
+using System.Text.RegularExpressions;
+
+List<string> Names = new List<string>() 
+{
+    "Omar",
+    "Ali",
+    "Sally",
+    "Mohamed",
+    "Ahmed"
+};
+```
+
+## Simple Vowel Removal
+
+### Basic Query
+```csharp
+// Remove vowels using regex
+var Result = from N in Names
+            select Regex.Replace(N, "[AOUIEaouie]", string.Empty);
+
+// Display results
+foreach(var name in Result)
+    Console.WriteLine(name);
+
+/* Output:
+mr
+l
+slly
+Mhmd
+hmd
+*/
+```
+
+## Advanced Query with Continuation
+
+### Using 'into' for Further Processing
+```csharp
+var Result = from N in Names
+             select Regex.Replace(N, "[AOUIEaouie]", string.Empty)
+             into NoVowelNames
+             where NoVowelNames.Length > 3
+             select NoVowelNames;
+
+/* Output:
+Slly
+Mhmd
+*/
+```
+
+## Query Breakdown
+
+```mermaid
+graph LR
+    A[Names] --> B[Remove Vowels]
+    B --> C[into NoVowelNames]
+    C --> D[Length Filter]
+    D --> E[Final Result]
+    
+    subgraph "First Operation"
+        B -->|"Regex.Replace"| C
+    end
+    
+    subgraph "Continuation"
+        C -->|"Length > 3"| D
+    end
+```
+
+## Understanding Query Continuation
+
+### 1. Initial Query
+```csharp
+from N in Names
+select Regex.Replace(N, "[AOUIEaouie]", string.Empty)
+```
+
+### 2. Continuation with 'into'
+```csharp
+into NoVowelNames  // Creates new range variable
+```
+
+### 3. Additional Processing
+```csharp
+where NoVowelNames.Length > 3
+select NoVowelNames
+```
+
+## Key Points
+
+| Feature | Description | Example |
+|---------|-------------|---------|
+| Query Syntax Only | Not available in fluent syntax | `from ... into ...` |
+| Range Variable | Creates new scope | `into NoVowelNames` |
+| Continuation | Enables further processing | `where NoVowelNames.Length > 3` |
+
+## Regular Expression Details
+
+```csharp
+Regex.Replace(
+    input: N,                    // Input string
+    pattern: "[AOUIEaouie]",     // Vowel pattern
+    replacement: string.Empty     // Remove vowels
+)
+```
+
+## Best Practices
+
+1. **Clear Naming**
+```csharp
+// Good
+into processedNames
+
+// Avoid
+into x
+```
+
+2. **Logical Flow**
+```csharp
+// Transform first, then filter
+select Regex.Replace(...)
+into processed
+where processed.Length > 3
+```
+
+3. **Readability**
+```csharp
+var Result = from N in Names
+             select Regex.Replace(N, "[AOUIEaouie]", string.Empty)
+             into NoVowelNames
+             where NoVowelNames.Length > 3
+             select NoVowelNames;
+```
+
+## Process Flow Visualization
+
+```mermaid
+graph TD
+    A[Original Names] --> B[Remove Vowels]
+    B --> C[Create NoVowelNames]
+    C --> D[Filter by Length]
+    D --> E[Final Result]
+    
+    subgraph "Example"
+        F["Omar"] --> G["mr"]
+        G --> H["Length Check"]
+        H -->|"< 3"| I["Excluded"]
+    end
+```
+
+## Query Steps Explained
+
+1. **Initial Data**
+   - List of names (Omar, Ali, Sally, Mohamed, Ahmed)
+
+2. **First Transformation**
+   - Remove vowels using Regex
+   - Creates intermediate results (mr, l, slly, Mhmd, hmd)
+
+3. **Query Continuation**
+   - New range variable for processed names
+   - Filter by length > 3
+   - Final results (Slly, Mhmd)
+
