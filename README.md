@@ -875,3 +875,162 @@ var pageItems = ProductList
     .Take(pageSize)
     .ToList();
 ```
+
+# LINQ Conditional Partitioning: TakeWhile and SkipWhile
+
+## Overview
+TakeWhile and SkipWhile are conditional partitioning operators that work based on predicates rather than fixed counts. They use deferred execution and stop/start taking elements when their conditions are met.
+
+```mermaid
+graph TB
+    A[Conditional Partitioning] --> B[TakeWhile]
+    A --> C[SkipWhile]
+    
+    B --> D[Simple Predicate]
+    B --> E[Index-aware Predicate]
+    
+    C --> F[Simple Predicate]
+    C --> G[Index-aware Predicate]
+```
+
+## TakeWhile Operator
+
+### Basic Concept
+Takes elements from the sequence as long as the condition is true, stops at the first false condition.
+
+### Example with Index Comparison
+```csharp
+int[] Numbers = { 5, 4, 6, 5, 8, 7, 1, 2, 1, 9 };
+var Result = Numbers.TakeWhile((Num, I) => Num > I);
+
+// Result: 5, 4, 6, 5, 8, 7
+// Stops at 1 because 1 is not > index 6
+```
+
+### Visual Process
+```mermaid
+graph LR
+    subgraph "Input Sequence"
+        A[5] --> B[4] --> C[6] --> D[5] --> E[8]
+    end
+    
+    subgraph "Index Check"
+        A1["5 > 0 ✓"] --> B1["4 > 1 ✓"] --> C1["6 > 2 ✗"]
+    end
+    
+    subgraph "Result"
+        A2[5] --> B2[4]
+    end
+```
+
+### Overloads
+1. Simple Predicate
+```csharp
+.TakeWhile(num => condition)
+```
+
+2. Index-aware Predicate
+```csharp
+.TakeWhile((num, index) => condition)
+```
+
+## SkipWhile Operator
+
+### Basic Concept
+Skips elements as long as the condition is true, starts taking elements at the first false condition.
+
+### Example with Modulo Operation
+```csharp
+int[] Numbers = { 5, 4, 1, 5, 8, 7, 1, 2, 1, 9, 5, 7, 8, 5, 4 };
+var Result = Numbers.SkipWhile(Num => Num % 3 != 0);
+
+// Skips numbers until finding one divisible by 3
+```
+
+### Visual Process
+```mermaid
+graph LR
+    subgraph "Input Sequence"
+        A[5] --> B[4] --> C[6] --> D[5] --> E[8]
+    end
+    
+    subgraph "Condition Check"
+        A1["5%3≠0 ✓"] --> B1["4%3≠0 ✓"] --> C1["6%3=0 ✗"]
+    end
+    
+    subgraph "Result"
+        C2[6] --> D2[5] --> E2[8]
+    end
+```
+
+## Comparison of Operators
+
+| Feature | TakeWhile | SkipWhile |
+|---------|-----------|-----------|
+| Operation | Takes until condition false | Skips until condition false |
+| Stopping Point | First false condition | First false condition |
+| Index Overload | Yes | Yes |
+| Execution | Deferred | Deferred |
+
+## Common Use Cases
+
+### 1. TakeWhile with Index
+```csharp
+// Take numbers greater than their position
+var result = sequence.TakeWhile((num, index) => num > index);
+```
+
+### 2. SkipWhile with Condition
+```csharp
+// Skip until finding a value meeting criteria
+var result = sequence.SkipWhile(x => !IsValid(x));
+```
+
+## Best Practices
+
+1. **Clear Predicates**
+```csharp
+// Good: Clear intention
+.TakeWhile((num, i) => num > i)
+
+// Avoid: Complex conditions
+.TakeWhile((num, i) => num > i && num % 2 == 0 || i < 5)
+```
+
+2. **Combining Operations**
+```csharp
+// Chain with other LINQ operators
+var result = numbers
+    .Where(n => n > 0)
+    .TakeWhile((num, i) => num > i)
+    .Select(n => n * 2);
+```
+
+3. **Performance Considerations**
+```csharp
+// Consider materialization for multiple enumeration
+var result = numbers
+    .TakeWhile((n, i) => n > i)
+    .ToList();
+```
+
+## Example Output Visualization
+
+For input: `{ 5, 4, 6, 5, 8, 7 }`
+
+TakeWhile (num > index):
+```
+Index 0: 5 > 0 ✓ (Take 5)
+Index 1: 4 > 1 ✓ (Take 4)
+Index 2: 6 > 2 ✓ (Take 6)
+Index 3: 5 > 3 ✓ (Take 5)
+Index 4: 8 > 4 ✓ (Take 8)
+Index 5: 7 > 5 ✓ (Take 7)
+```
+
+SkipWhile (num % 3 != 0):
+```
+5 % 3 ≠ 0 ✓ (Skip)
+4 % 3 ≠ 0 ✓ (Skip)
+6 % 3 = 0 ✗ (Take this and rest)
+```
