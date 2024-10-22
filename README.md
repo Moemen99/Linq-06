@@ -787,47 +787,7 @@ var Result = ProductList
     .SkipLast(5);
 ```
 
-## Pagination Implementation
 
-```mermaid
-graph LR
-    A[Full Dataset] --> B[Skip((page-1) * pageSize)]
-    B --> C[Take(pageSize)]
-    
-    subgraph "Pagination Process"
-        B --> |"Skip previous pages"| BC[Position to page]
-        BC --> |"Take page size"| C
-    end
-```
-
-### Example: Implementing Pagination
-```csharp
-public class PaginationResult<T>
-{
-    public IEnumerable<T> Items { get; set; }
-    public int PageNumber { get; set; }
-    public int PageSize { get; set; }
-    public int TotalItems { get; set; }
-}
-
-public PaginationResult<Product> GetPage(int pageNumber, int pageSize)
-{
-    var query = ProductList.Where(P => P.UnitsInStock != 0);
-    var totalItems = query.Count();
-    
-    var items = query
-        .Skip((pageNumber - 1) * pageSize)
-        .Take(pageSize);
-        
-    return new PaginationResult<Product>
-    {
-        Items = items,
-        PageNumber = pageNumber,
-        PageSize = pageSize,
-        TotalItems = totalItems
-    };
-}
-```
 
 ## Visual Examples
 
