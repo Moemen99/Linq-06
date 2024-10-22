@@ -718,3 +718,200 @@ select new
 { CategoryName = Seafood, CountOfProduct = 12 }
 { CategoryName = Confections, CountOfProduct = 13 }
 ```
+# LINQ Partitioning Operators
+
+## Overview
+Partitioning operators in LINQ enable data pagination and sequence splitting. These operators use deferred execution and are essential for implementing pagination and data sampling.
+
+```mermaid
+graph TD
+    A[Partitioning Operators] --> B[Take Family]
+    A --> C[Skip Family]
+    
+    B --> D[Take]
+    B --> E[TakeLast]
+    B --> F[TakeWhile]
+    
+    C --> G[Skip]
+    C --> H[SkipLast]
+    C --> I[SkipWhile]
+```
+
+## Available Operators
+
+| Operator | Purpose | Usage |
+|----------|---------|-------|
+| Take | Get first n elements | `Take(5)` |
+| TakeLast | Get last n elements | `TakeLast(5)` |
+| Skip | Skip first n elements | `Skip(5)` |
+| SkipLast | Skip last n elements | `SkipLast(5)` |
+| TakeWhile | Take elements while condition is true | `TakeWhile(predicate)` |
+| SkipWhile | Skip elements while condition is true | `SkipWhile(predicate)` |
+
+## Basic Examples
+
+### 1. Take First N Products
+```csharp
+// Get first 5 products in stock
+var Result = ProductList
+    .Where(P => P.UnitsInStock != 0)
+    .Take(5);
+
+// Sample Output based on data:
+// ProductID:1, ProductName:Chai, CategoryBeverages, UnitPrice:18.00, UnitsInStock:100
+// ProductID:2, ProductName:Chang, CategoryBeverages, UnitPrice:19.00, UnitsInStock:17
+// etc...
+```
+
+### 2. Skip N Products
+```csharp
+// Skip first 5 products in stock
+var Result = ProductList
+    .Where(P => P.UnitsInStock != 0)
+    .Skip(5);
+```
+
+### 3. Take Last N Products
+```csharp
+// Get last 5 products in stock
+var Result = ProductList
+    .Where(P => P.UnitsInStock != 0)
+    .TakeLast(5);
+```
+
+### 4. Skip Last N Products
+```csharp
+// Skip last 5 products
+var Result = ProductList
+    .Where(P => P.UnitsInStock != 0)
+    .SkipLast(5);
+```
+
+## Pagination Implementation
+
+```mermaid
+graph LR
+    A[Full Dataset] --> B[Skip((page-1) * pageSize)]
+    B --> C[Take(pageSize)]
+    
+    subgraph "Pagination Process"
+        B --> |"Skip previous pages"| BC[Position to page]
+        BC --> |"Take page size"| C
+    end
+```
+
+### Example: Implementing Pagination
+```csharp
+public class PaginationResult<T>
+{
+    public IEnumerable<T> Items { get; set; }
+    public int PageNumber { get; set; }
+    public int PageSize { get; set; }
+    public int TotalItems { get; set; }
+}
+
+public PaginationResult<Product> GetPage(int pageNumber, int pageSize)
+{
+    var query = ProductList.Where(P => P.UnitsInStock != 0);
+    var totalItems = query.Count();
+    
+    var items = query
+        .Skip((pageNumber - 1) * pageSize)
+        .Take(pageSize);
+        
+    return new PaginationResult<Product>
+    {
+        Items = items,
+        PageNumber = pageNumber,
+        PageSize = pageSize,
+        TotalItems = totalItems
+    };
+}
+```
+
+## Visual Examples
+
+### Take Operation
+```mermaid
+graph LR
+    subgraph "Original Sequence"
+        A[1] --> B[2] --> C[3] --> D[4] --> E[5] --> F[...]
+    end
+    
+    subgraph "Take(3)"
+        A2[1] --> B2[2] --> C2[3]
+    end
+```
+
+### Skip Operation
+```mermaid
+graph LR
+    subgraph "Original Sequence"
+        A[1] --> B[2] --> C[3] --> D[4] --> E[5] --> F[...]
+    end
+    
+    subgraph "Skip(2)"
+        D2[3] --> E2[4] --> F2[5] --> G2[...]
+    end
+```
+
+## Common Use Cases
+
+1. **Page Navigation**
+```csharp
+// Get specific page of data
+var pageSize = 10;
+var pageNumber = 2;
+var pageData = ProductList
+    .Skip((pageNumber - 1) * pageSize)
+    .Take(pageSize);
+```
+
+2. **Data Sampling**
+```csharp
+// Get first n items for preview
+var sample = ProductList
+    .Take(5);
+```
+
+3. **Windowing**
+```csharp
+// Get items between positions
+var window = ProductList
+    .Skip(5)
+    .Take(5);
+```
+
+## Best Practices
+
+1. **Efficient Filtering**
+```csharp
+// Filter before pagination
+var result = ProductList
+    .Where(p => p.UnitsInStock != 0) // Filter first
+    .Skip(skip)
+    .Take(take);
+```
+
+2. **Error Handling**
+```csharp
+public IEnumerable<Product> GetPage(int pageNumber, int pageSize)
+{
+    if (pageNumber < 1) pageNumber = 1;
+    if (pageSize < 1) pageSize = 10;
+    
+    return ProductList
+        .Skip((pageNumber - 1) * pageSize)
+        .Take(pageSize);
+}
+```
+
+3. **Performance Considerations**
+```csharp
+// Consider materialization for multiple enumeration
+var totalCount = ProductList.Count();
+var pageItems = ProductList
+    .Skip((pageNumber - 1) * pageSize)
+    .Take(pageSize)
+    .ToList();
+```
