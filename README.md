@@ -325,3 +325,192 @@ var groups = result.ToList();
 // Handle potential null keys
 var result = products.GroupBy(p => p.Category ?? "Uncategorized");
 ```
+
+
+
+# Advanced LINQ Grouping with Filtering
+
+## Overview
+This example demonstrates how to combine multiple LINQ operations to:
+1. Filter products in stock
+2. Group them by category
+3. Filter groups by size
+4. Project results into a custom format
+
+```mermaid
+graph TD
+    A[Products] --> B[Filter: In Stock]
+    B --> C[Group by Category]
+    C --> D[Filter: Count > 10]
+    D --> E[Project Results]
+    
+    subgraph "Process Flow"
+        B --> |"UnitsInStock != 0"| C
+        C --> |"Count() > 10"| D
+        D --> |"Select new {}"| E
+    end
+```
+
+## Basic Group By with Filtering
+
+### Query Syntax - Basic Version
+```csharp
+var Result = from P in ProductList
+             where P.UnitsInStock != 0
+             group P by P.Category;
+
+// Display Results
+foreach(var Category in Result)
+{
+    Console.WriteLine(Category.Key);
+    foreach(var Product in Category)
+    {
+        Console.WriteLine($"         {Product.ProductName}");
+    }
+}
+```
+
+## Advanced Grouping with Size Filter
+
+### Query Syntax - Using 'into'
+```csharp
+var Result = from P in ProductList
+             where P.UnitsInStock != 0
+             group P by P.Category
+             into Category
+             where Category.Count() > 10
+             select Category;
+```
+
+### Query Syntax - With Anonymous Type Projection
+```csharp
+var Result = from P in ProductList
+             where P.UnitsInStock != 0
+             group P by P.Category
+             into Category
+             where Category.Count() > 10
+             select new 
+             {
+                 CategoryName = Category.Key,
+                 CountOfProduct = Category.Count()
+             };
+
+// Simple display
+foreach(var Category in Result)
+    Console.WriteLine(Category);
+```
+
+### Fluent Syntax - Complete Operation
+```csharp
+var Result = ProductList
+    .Where(P => P.UnitsInStock != 0)
+    .GroupBy(P => P.Category)
+    .Where(C => C.Count() > 10)
+    .Select(C => new 
+    {
+        CategoryName = C.Key,
+        CountOfProduct = C.Count()
+    });
+```
+
+## Sample Output
+```json
+{ CategoryName = Beverages, CountOfProduct = 12 }
+{ CategoryName = Condiments, CountOfProduct = 11 }
+{ CategoryName = Seafood, CountOfProduct = 12 }
+{ CategoryName = Confections, CountOfProduct = 13 }
+```
+
+## Operation Breakdown
+
+```mermaid
+graph LR
+    A[Initial Filter] --> B[Grouping]
+    B --> C[Group Filter]
+    C --> D[Projection]
+    
+    subgraph "Step 1"
+        A --> |"UnitsInStock != 0"| AB[Remove Out of Stock]
+    end
+    
+    subgraph "Step 2"
+        B --> |"Group by Category"| BC[Create Groups]
+    end
+    
+    subgraph "Step 3"
+        C --> |"Count > 10"| CD[Filter Large Groups]
+    end
+    
+    subgraph "Step 4"
+        D --> |"Select new {}"| DE[Create Result Objects]
+    end
+```
+
+## Comparison of Approaches
+
+| Feature | Query Syntax | Fluent Syntax |
+|---------|-------------|---------------|
+| Readability | More readable for complex queries | More concise |
+| 'into' keyword | Available | Not needed |
+| Chaining | Less obvious | More natural |
+| Anonymous Types | Similar syntax | Similar syntax |
+
+## Key Points
+
+1. **Operation Order**
+   - Filter source data first
+   - Group filtered data
+   - Filter groups
+   - Project results
+
+2. **Performance Considerations**
+   ```csharp
+   // More efficient: filter before grouping
+   .Where(P => P.UnitsInStock != 0)
+   .GroupBy(...)
+   
+   // Less efficient: filter after grouping
+   .GroupBy(...)
+   .Where(...)
+   ```
+
+3. **Memory Usage**
+   ```csharp
+   // Consider materializing for multiple enumeration
+   var materializedResult = Result.ToList();
+   ```
+
+## Best Practices
+
+1. **Early Filtering**
+```csharp
+// Preferred: Filter before grouping
+.Where(P => P.UnitsInStock != 0)
+.GroupBy(...)
+
+// Avoid: Filtering entire groups
+.GroupBy(...)
+.Where(g => g.All(p => p.UnitsInStock != 0))
+```
+
+2. **Clear Naming**
+```csharp
+// Use descriptive names in projections
+select new 
+{
+    CategoryName = Category.Key,  // Better than just "Key"
+    CountOfProduct = Category.Count()  // Better than just "Count"
+};
+```
+
+3. **Group Operations**
+```csharp
+// Additional group operations
+.Select(g => new 
+{
+    CategoryName = g.Key,
+    CountOfProduct = g.Count(),
+    TotalValue = g.Sum(p => p.UnitPrice * p.UnitsInStock),
+    AveragePrice = g.Average(p => p.UnitPrice)
+});
+```
